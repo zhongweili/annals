@@ -1,21 +1,26 @@
-# Copy to ~/.config/sessionkeep/config.toml and edit.
-# `sessionkeep init` writes a machine-specific version of this file.
+# Copy to ~/.config/annals/config.toml and edit.
+# `annals init` writes a machine-specific version of this file.
 
 [archive]
-path = "~/sessionkeep-archive"
+path = "~/annals-archive"
 # One directory (and usually one git branch) per machine. Do not merge
 # working trees across laptops — session paths are host-specific.
 machine = "mini"
 branch = "mini"
 # Optional. Any git remote works: GitHub private, a VPS bare repo, SourceHut.
 # Leave unset for local-only. Push failure does not fail the backup.
-# remote = "git@github.com:YOU/sessionkeep-archive.git"
+# remote = "git@github.com:YOU/annals-archive.git"
 # remote_name = "origin"
-push = true
+push = false
+# Lock + log live here, deliberately outside the archive repo — inside it they
+# would be committed by `git add -A` on every run. Defaults to
+# $XDG_STATE_HOME/annals/<machine>, else ~/.local/state/annals/<machine>.
+# state_dir = "~/.local/state/annals/mini"
 
 [git]
-# Only needed if this machine has no global git identity.
-# author_name = "sessionkeep"
+# Required if this machine has no `git config --global user.email` —
+# without an identity, backup refuses to commit.
+# author_name = "annals"
 # author_email = "you@example.com"
 pack_window_memory = "64m"
 pack_size_limit = "256m"

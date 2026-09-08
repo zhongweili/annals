@@ -12,8 +12,8 @@ archive" is the real missing set.
 Usage:
   python extras/42plugin_rescue.py \
     --db ~/.42plugin/plugin.db \
-    --projects ~/sessionkeep-archive/MACHINE/claude/projects \
-    --out ~/sessionkeep-archive/MACHINE/42plugin-rescued
+    --projects ~/annals-archive/MACHINE/claude/projects \
+    --out ~/annals-archive/MACHINE/42plugin-rescued
 """
 from __future__ import annotations
 

@@ -5,8 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from sessionkeep.adapters import Detected, get
-from sessionkeep.config import (
+from annals.adapters import Detected, get
+from annals.config import (
     DEFAULT_ROOTS,
     KNOWN_UNSUPPORTED,
     KINDS,

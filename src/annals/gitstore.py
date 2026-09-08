@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
-from sessionkeep.config import Config
+from annals.config import Config
 
 
 class GitError(RuntimeError):
@@ -39,6 +39,17 @@ def _git(repo: Path, *args: str, check: bool = True, env: dict | None = None) ->
     if check and r.returncode != 0:
         raise GitError(r.stderr.strip() or r.stdout.strip() or f"git {args[0]} failed")
     return r
+
+
+def global_git_email() -> str | None:
+    r = subprocess.run(
+        ["git", "config", "--global", "user.email"],
+        capture_output=True,
+        text=True,
+    )
+    if r.returncode != 0:
+        return None
+    return r.stdout.strip() or None
 
 
 def ensure_repo(cfg: Config) -> None:
@@ -86,7 +97,7 @@ def commit_and_maybe_push(cfg: Config, log) -> GitResult:
     numstat = _git(repo, "diff", "--cached", "--numstat")
     n = len([ln for ln in numstat.stdout.splitlines() if ln.strip()])
     stamp = datetime.now(timezone.utc).astimezone().strftime("%Y-%m-%d %H:%M:%S")
-    msg = f"sessionkeep backup [{cfg.archive.machine}] {stamp} — {n} files changed"
+    msg = f"annals backup [{cfg.archive.machine}] {stamp} — {n} files changed"
     _git(repo, "commit", "-q", "-m", msg)
     sha = _git(repo, "rev-parse", "--short", "HEAD").stdout.strip()
     log(f"committed {sha}, {n} files changed")

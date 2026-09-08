@@ -1,9 +1,9 @@
 [Unit]
-Description=sessionkeep append-only agent session archive
+Description=annals append-only agent session archive
 
 [Service]
 Type=oneshot
-ExecStart=%h/.local/bin/sessionkeep backup
+ExecStart=%h/.local/bin/annals backup
 Nice=15
 IOSchedulingClass=idle
 StandardOutput=journal

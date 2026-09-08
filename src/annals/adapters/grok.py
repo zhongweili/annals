@@ -11,9 +11,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from sessionkeep.adapters import Detected, HarvestResult
-from sessionkeep.config import SourceConfig
-from sessionkeep.mirror import (
+from annals.adapters import Detected, HarvestResult
+from annals.config import SourceConfig
+from annals.mirror import (
     DEFAULT_EXCLUDE,
     any_exclude,
     copy_file,
@@ -21,7 +21,7 @@ from sessionkeep.mirror import (
     exclude_prefixes,
     mirror_no_delete,
 )
-from sessionkeep.sanitize import write_if_changed
+from annals.sanitize import write_if_changed
 
 MEMORY_EXCLUDE = any_exclude(
     DEFAULT_EXCLUDE,

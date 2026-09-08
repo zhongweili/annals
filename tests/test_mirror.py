@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from sessionkeep.mirror import exclude_prefixes, mirror_no_delete
+from annals.mirror import exclude_prefixes, mirror_no_delete
 
 
 def test_no_delete_keeps_dest_only_files(tmp_path: Path):

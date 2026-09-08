@@ -1,8 +1,8 @@
 import json
 from pathlib import Path
 
-from sessionkeep.adapters.claude import ADAPTER
-from sessionkeep.config import SourceConfig
+from annals.adapters.claude import ADAPTER
+from annals.config import SourceConfig
 
 
 def test_harvest_keeps_deleted_transcript(tmp_path: Path):

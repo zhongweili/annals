@@ -10,10 +10,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from sessionkeep.adapters import Detected, HarvestResult
-from sessionkeep.config import SourceConfig
-from sessionkeep.mirror import DEFAULT_EXCLUDE, copy_file, mirror_no_delete
-from sessionkeep.sanitize import write_if_changed
+from annals.adapters import Detected, HarvestResult
+from annals.config import SourceConfig
+from annals.mirror import DEFAULT_EXCLUDE, copy_file, mirror_no_delete
+from annals.sanitize import write_if_changed
 
 
 class ClaudeAdapter:

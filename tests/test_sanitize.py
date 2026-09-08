@@ -1,4 +1,4 @@
-from sessionkeep.sanitize import PLACEHOLDER, dump_sanitized, scrub
+from annals.sanitize import PLACEHOLDER, dump_sanitized, scrub
 
 
 def test_key_name_redacts_token():

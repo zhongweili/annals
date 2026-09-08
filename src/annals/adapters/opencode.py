@@ -15,9 +15,9 @@ import datetime as dt
 import json
 from pathlib import Path
 
-from sessionkeep.adapters import Detected, HarvestResult
-from sessionkeep.config import SourceConfig
-from sessionkeep.sqliteutil import SqliteSnapshotError, snapshot_connection
+from annals.adapters import Detected, HarvestResult
+from annals.config import SourceConfig
+from annals.sqliteutil import SqliteSnapshotError, snapshot_connection
 
 
 class OpenCodeAdapter:

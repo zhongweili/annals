@@ -2,7 +2,7 @@
 # Optional: monthly encrypted snapshot of the *bare* git archive → S3-compatible
 # storage (Cloudflare R2, AWS S3, …).
 #
-# This is NOT the daily backup. Daily protection is `sessionkeep backup`
+# This is NOT the daily backup. Daily protection is `annals backup`
 # pushing to a git remote. This recipe is a second copy of the already-
 # compressed git object store, for when the git remote itself dies.
 #
@@ -15,7 +15,7 @@
 #   aws configure --profile r2
 #   printf '%s' 'PASSPHRASE' > ~/.backup-gpg.pass && chmod 600 ~/.backup-gpg.pass
 #   export R2_BUCKET=… R2_ACCOUNT_ID=… PASSPHRASE_FILE=~/.backup-gpg.pass
-#   export REPO=$HOME/git/sessionkeep-archive.git
+#   export REPO=$HOME/git/annals-archive.git
 set -euo pipefail
 
 : "${R2_BUCKET:?}" "${R2_ACCOUNT_ID:?}" "${PASSPHRASE_FILE:?}"
@@ -39,23 +39,23 @@ log "after repack: $(du -sh "$REPO" | cut -f1)"
 git -C "$REPO" fsck --no-progress --no-dangling >/dev/null \
   || log "WARN fsck reported issues"
 
-name="sessionkeep-$STAMP.tar.gz"
+name="annals-$STAMP.tar.gz"
 tar -czf "$WORK/$name" -C "$(dirname "$REPO")" "$(basename "$REPO")"
 gpg --batch --yes --quiet --passphrase-file "$PASSPHRASE_FILE" \
     --symmetric --cipher-algo AES256 -o "$WORK/$name.gpg" "$WORK/$name"
 rm -f "$WORK/$name"
 
-aws s3 cp --quiet "$WORK/$name.gpg" "s3://$R2_BUCKET/sessionkeep-git/$name.gpg" \
+aws s3 cp --quiet "$WORK/$name.gpg" "s3://$R2_BUCKET/annals-git/$name.gpg" \
   --profile "$AWS_PROFILE_NAME" --endpoint-url "$R2_ENDPOINT"
-log "uploaded sessionkeep-git/$name.gpg ($(du -h "$WORK/$name.gpg" | cut -f1))"
+log "uploaded annals-git/$name.gpg ($(du -h "$WORK/$name.gpg" | cut -f1))"
 
 # Keep the newest KEEP archives.
-mapfile -t keys < <(aws s3 ls "s3://$R2_BUCKET/sessionkeep-git/" \
+mapfile -t keys < <(aws s3 ls "s3://$R2_BUCKET/annals-git/" \
                     --profile "$AWS_PROFILE_NAME" --endpoint-url "$R2_ENDPOINT" \
                     2>/dev/null | sort | awk '{print $4}')
 if (( ${#keys[@]} > KEEP )); then
   for k in "${keys[@]:0:${#keys[@]}-KEEP}"; do
-    aws s3 rm --quiet "s3://$R2_BUCKET/sessionkeep-git/$k" \
+    aws s3 rm --quiet "s3://$R2_BUCKET/annals-git/$k" \
       --profile "$AWS_PROFILE_NAME" --endpoint-url "$R2_ENDPOINT" \
       && log "pruned $k"
   done

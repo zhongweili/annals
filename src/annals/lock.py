@@ -7,14 +7,14 @@ from pathlib import Path
 from types import TracebackType
 
 if sys.platform == "win32":  # pragma: no cover - v1 is Unix
-    raise RuntimeError("sessionkeep v1 does not support Windows")
+    raise RuntimeError("annals v1 does not support Windows")
 
 import fcntl
 
 
 class ArchiveLock:
-    def __init__(self, archive: Path):
-        self.path = archive / ".sessionkeep.lock"
+    def __init__(self, state_dir: Path):
+        self.path = state_dir / "annals.lock"
         self._fh = None
 
     def acquire(self) -> bool:

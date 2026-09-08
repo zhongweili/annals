@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
 
-from sessionkeep.config import SourceConfig
+from annals.config import SourceConfig
 
 
 @dataclass
@@ -35,7 +35,7 @@ class Adapter(Protocol):
 
 
 def get(kind: str) -> Adapter:
-    from sessionkeep.adapters import claude, grok, opencode
+    from annals.adapters import claude, grok, opencode
 
     table = {
         claude.ADAPTER.kind: claude.ADAPTER,

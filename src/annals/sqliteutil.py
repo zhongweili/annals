@@ -25,7 +25,7 @@ def snapshot_connection(db: Path, timeout: float = 30.0) -> Iterator[sqlite3.Con
     """Yield a read-only connection to a consistent snapshot of *db*."""
     if not db.is_file():
         raise SqliteSnapshotError(f"database not found: {db}")
-    tmp = Path(tempfile.mkdtemp(prefix="sessionkeep-sqlite-"))
+    tmp = Path(tempfile.mkdtemp(prefix="annals-sqlite-"))
     snap = tmp / "snap.db"
     last_err: Exception | None = None
     try:

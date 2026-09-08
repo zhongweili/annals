@@ -3,10 +3,10 @@
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.example.sessionkeep</string>
+    <string>com.example.annals</string>
     <key>ProgramArguments</key>
     <array>
-        <string>/Users/YOU/.local/bin/sessionkeep</string>
+        <string>/Users/YOU/.local/bin/annals</string>
         <string>backup</string>
     </array>
     <key>StartCalendarInterval</key>
@@ -16,9 +16,10 @@
         <key>Minute</key>
         <integer>0</integer>
     </dict>
+    <!-- Never point these inside the archive repo: they would be committed. -->
     <key>StandardOutPath</key>
-    <string>/Users/YOU/sessionkeep-archive/launchd.out.log</string>
+    <string>/Users/YOU/.local/state/annals/launchd.out.log</string>
     <key>StandardErrorPath</key>
-    <string>/Users/YOU/sessionkeep-archive/launchd.err.log</string>
+    <string>/Users/YOU/.local/state/annals/launchd.err.log</string>
 </dict>
 </plist>

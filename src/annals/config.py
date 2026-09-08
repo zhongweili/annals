@@ -1,4 +1,4 @@
-"""Load and write sessionkeep TOML config. Stdlib only (tomllib)."""
+"""Load and write annals TOML config. Stdlib only (tomllib)."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from pathlib import Path
 
 KINDS = ("claude", "grok", "opencode")
 
-DEFAULT_CONFIG_PATH = Path.home() / ".config" / "sessionkeep" / "config.toml"
+DEFAULT_CONFIG_PATH = Path.home() / ".config" / "annals" / "config.toml"
 
 DEFAULT_ROOTS = {
     "claude": Path.home() / ".claude",
@@ -35,6 +35,18 @@ def default_machine() -> str:
     return host or "machine"
 
 
+def default_state_dir(machine: str) -> Path:
+    """Operational state lives outside the archive worktree.
+
+    The lock churns a pid every run and the log grows every run. Kept
+    inside the archive they were swept up by `git add -A`, so every run
+    committed even when no session had changed.
+    """
+    base = os.environ.get("XDG_STATE_HOME")
+    root = expand(base) if base else Path.home() / ".local" / "state"
+    return root / "annals" / machine
+
+
 @dataclass
 class ArchiveConfig:
     path: Path
@@ -43,6 +55,12 @@ class ArchiveConfig:
     remote: str | None = None
     remote_name: str = "origin"
     push: bool = True
+    state_dir: Path | None = None
+
+    def resolved_state_dir(self) -> Path:
+        if self.state_dir is not None:
+            return self.state_dir
+        return default_state_dir(self.machine)
 
 
 @dataclass
@@ -90,16 +108,19 @@ def load(path: Path | None = None) -> Config:
     raw_path = path or _discover()
     if raw_path is None or not raw_path.is_file():
         raise ConfigError(
-            "no config found; run `sessionkeep init` or pass --config"
+            "no config found; run `annals init` or pass --config"
         )
-    data = tomllib.loads(raw_path.read_text())
+    try:
+        data = tomllib.loads(raw_path.read_text())
+    except tomllib.TOMLDecodeError as e:
+        raise ConfigError(f"{raw_path} is not valid TOML: {e}") from e
     cfg = parse(data)
     cfg.path = raw_path
     return cfg
 
 
 def _discover() -> Path | None:
-    env = os.environ.get("SESSIONKEEP_CONFIG")
+    env = os.environ.get("ANNALS_CONFIG")
     if env:
         return expand(env)
     if DEFAULT_CONFIG_PATH.is_file():
@@ -116,6 +137,7 @@ def parse(data: dict) -> Config:
         raise ConfigError("[archive].machine must be non-empty")
     branch = str(arch.get("branch") or machine)
     remote = arch.get("remote")
+    state_dir = arch.get("state_dir")
     archive = ArchiveConfig(
         path=expand(arch["path"]),
         machine=machine,
@@ -123,7 +145,14 @@ def parse(data: dict) -> Config:
         remote=(str(remote).strip() or None) if remote else None,
         remote_name=str(arch.get("remote_name") or "origin"),
         push=bool(arch.get("push", True)),
+        state_dir=expand(state_dir) if state_dir else None,
     )
+    resolved_state = archive.resolved_state_dir()
+    if resolved_state == archive.path or archive.path in resolved_state.parents:
+        raise ConfigError(
+            f"[archive].state_dir ({resolved_state}) must not be inside the "
+            f"archive repo ({archive.path}); the lock and log would be committed"
+        )
     g = data.get("git") or {}
     git = GitConfig(
         author_name=g.get("author_name"),
@@ -156,7 +185,7 @@ def dumps(cfg: Config) -> str:
     """Serialize a Config to TOML. Small enough that we skip a TOML lib."""
     a = cfg.archive
     lines = [
-        "# sessionkeep config — see SPECIFICATION.md",
+        "# annals config — see SPECIFICATION.md",
         "",
         "[archive]",
         f'path = "{_toml_path(a.path)}"',
@@ -167,11 +196,18 @@ def dumps(cfg: Config) -> str:
         lines.append(f'remote = "{a.remote}"')
         lines.append(f'remote_name = "{a.remote_name}"')
     lines.append(f"push = {'true' if a.push else 'false'}")
+    if a.state_dir is not None:
+        lines.append(f'state_dir = "{_toml_path(a.state_dir)}"')
     lines += ["", "[git]"]
     if cfg.git.author_name:
         lines.append(f'author_name = "{cfg.git.author_name}"')
+    else:
+        lines.append('# author_name = "annals"')
     if cfg.git.author_email:
         lines.append(f'author_email = "{cfg.git.author_email}"')
+    else:
+        lines.append("# Required if this machine has no `git config --global user.email`.")
+        lines.append('# author_email = "you@example.com"')
     lines.append(f'pack_window_memory = "{cfg.git.pack_window_memory}"')
     lines.append(f'pack_size_limit = "{cfg.git.pack_size_limit}"')
     lines.append("")

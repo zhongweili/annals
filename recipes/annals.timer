@@ -1,5 +1,5 @@
 [Unit]
-Description=Daily sessionkeep archive
+Description=Daily annals archive
 
 [Timer]
 OnCalendar=*-*-* 03:00:00

@@ -2,9 +2,9 @@ import json
 import sqlite3
 from pathlib import Path
 
-from sessionkeep.adapters.opencode import _export
-from sessionkeep.config import SourceConfig
-from sessionkeep.sqliteutil import snapshot_connection
+from annals.adapters.opencode import _export
+from annals.config import SourceConfig
+from annals.sqliteutil import snapshot_connection
 
 
 def _make_db(path: Path) -> None:
@@ -80,7 +80,7 @@ def test_snapshot_survives_wal(tmp_path: Path):
 
 
 def test_detect_missing(tmp_path: Path):
-    from sessionkeep.adapters.opencode import ADAPTER
+    from annals.adapters.opencode import ADAPTER
 
     d = ADAPTER.detect(SourceConfig(kind="opencode", root=tmp_path / "nope.db"))
     assert d.present is False

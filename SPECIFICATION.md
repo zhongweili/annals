@@ -1,4 +1,4 @@
-# sessionkeep specification
+# annals specification
 
 | | |
 |---|---|
@@ -15,11 +15,11 @@ This document is the contract. `README.md` is the landing page. If they disagree
 
 Coding-agent CLIs persist conversations on the local disk so they can resume. They also treat that persistence as **cache**: Claude Code prunes jsonl transcripts, OpenCode keeps a live WAL database, Grok rebuilds a large search index next to a small markdown memory store. Users who actually want history — debugging a past decision, recovering a deleted session, moving machines without losing the record — need a different object.
 
-**sessionkeep** is an unattended harvester. On a schedule it copies whatever each adapter knows how to read into a local git repository, **never deleting destination files the source no longer has**, then optionally pushes to a git remote the user owns. Cloudflare R2 (or any S3) is an optional monthly snapshot of that already-compressed git object store, not the daily path.
+**annals** is an unattended harvester. On a schedule it copies whatever each adapter knows how to read into a local git repository, **never deleting destination files the source no longer has**, then optionally pushes to a git remote the user owns. Cloudflare R2 (or any S3) is an optional monthly snapshot of that already-compressed git object store, not the daily path.
 
 One-line positioning:
 
-> Agent CLIs treat chat history as cache. Sessionkeep treats it as an append-only git archive.
+> Agent CLIs treat chat history as cache. Annals treats it as an append-only git archive.
 
 ---
 
@@ -96,7 +96,7 @@ flowchart LR
     GK["~/.grok/sessions + memory md"]
     OC["opencode.db WAL"]
   end
-  subgraph harvest [sessionkeep backup]
+  subgraph harvest [annals backup]
     A1[claude adapter]
     A2[grok adapter]
     A3[opencode adapter]
@@ -123,18 +123,25 @@ Daily path: adapters → local git. Remote git is redundancy. R2 is a second cop
 
 ### Process
 
-1. Load config (`--config`, else `$SESSIONKEEP_CONFIG`, else `~/.config/sessionkeep/config.toml`).
-2. Take `archive/.sessionkeep.lock` (fcntl, non-blocking). If busy: log and exit 0.
-3. For each enabled `[[source]]`, call the adapter with destination `archive/machine/kind/`. Adapter errors are logged; other sources still run.
-4. If every enabled source failed: exit 1.
-5. `git add -A` and commit if the index is dirty. Message: `sessionkeep backup [MACHINE] YYYY-MM-DD HH:MM:SS — N files changed`.
-6. If `archive.remote` is set and `push` is true: `git push` with `GIT_SSH_COMMAND` disabling ControlMaster (reused multiplexed SSH dies mid-push on large packs: “Broken pipe”). Push failure is logged, exit remains 0.
-7. Append the same lines to `archive/sessionkeep.log` and stdout.
+1. Load config (`--config`, else `$ANNALS_CONFIG`, else `~/.config/annals/config.toml`).
+2. Take `<state_dir>/annals.lock` (fcntl, non-blocking). If busy: log and exit 0.
+3. Ensure the archive repo exists and has a usable git identity. A missing identity fails here, **before** any harvest — otherwise the harvest writes the whole archive and only then discovers it cannot commit.
+4. For each enabled `[[source]]`, call the adapter with destination `archive/machine/kind/`. Adapter errors are logged; other sources still run.
+5. If every enabled source failed: exit 1.
+6. `git add -A` and commit if the index is dirty. Message: `annals backup [MACHINE] YYYY-MM-DD HH:MM:SS — N files changed`.
+7. If `archive.remote` is set and `push` is true: `git push` with `GIT_SSH_COMMAND` disabling ControlMaster (reused multiplexed SSH dies mid-push on large packs: “Broken pipe”). Push failure is logged, exit remains 0.
+8. Append the same lines to `<state_dir>/annals.log` and stdout.
+
+### Operational state is not archive data
+
+The lock (a pid, rewritten every run) and the log (appended every run) are **operational state, not harvested data**. They live in `state_dir`, which defaults to `$XDG_STATE_HOME/annals/<machine>` (else `~/.local/state/annals/<machine>`) and must not be inside the archive repo — config load rejects that.
+
+Kept inside the worktree they were swept up by `git add -A`, so *every* run produced a commit even when no session had changed, and step 6's "commit only if dirty" branch was unreachable. A daily timer then generated a commit a day of pure noise.
 
 ### Package layout
 
 ```
-src/sessionkeep/
+src/annals/
   cli.py            init / scan / backup / status
   config.py         TOML schema
   mirror.py         I1 primitive
@@ -159,7 +166,7 @@ New agents are a new module plus a `kind` string. `cli.py` does not grow per-ven
 ## 6. CLI
 
 ```
-sessionkeep [--config PATH] [--version] <command>
+annals [--config PATH] [--version] <command>
 ```
 
 | Command | Behaviour | Exit |
@@ -171,25 +178,28 @@ sessionkeep [--config PATH] [--version] <command>
 
 `--dry-run` prints the scan and writes nothing.
 
-`init` defaults: machine = first label of `socket.gethostname()`, archive = `~/sessionkeep-archive`, branch = machine, each v1 source `enabled` iff its default path exists.
+`init` defaults: machine = first label of `socket.gethostname()`, archive = `~/annals-archive`, branch = machine, each v1 source `enabled` iff its default path exists.
 
 ---
 
 ## 7. Configuration
 
-TOML. No YAML, no JSON, no implicit env except `SESSIONKEEP_CONFIG`.
+TOML. No YAML, no JSON, no implicit env except `ANNALS_CONFIG`.
 
 ```toml
 [archive]
-path = "~/sessionkeep-archive"   # required
+path = "~/annals-archive"   # required
 machine = "mini"                 # required, non-empty; becomes subdirectory name
 branch = "mini"                  # default: machine
-remote = "git@github.com:YOU/sessionkeep-archive.git"  # optional
+remote = "git@github.com:YOU/annals-archive.git"  # optional
 remote_name = "origin"           # default origin
 push = true                      # ignored if remote is unset
+# Lock + log location. Default $XDG_STATE_HOME/annals/<machine>,
+# else ~/.local/state/annals/<machine>. Must be outside `path`.
+state_dir = "~/.local/state/annals/mini"  # optional
 
 [git]
-author_name = "sessionkeep"      # optional; else inherit git config
+author_name = "annals"      # optional; else inherit git config
 author_email = "you@example.com" # required somehow: config or global git
 pack_window_memory = "64m"
 pack_size_limit = "256m"
@@ -230,10 +240,8 @@ Default roots:
 ## 8. Archive layout
 
 ```
-<archive>/                          # git root
+<archive>/                          # git root — harvested data only
   .git/
-  .sessionkeep.lock
-  sessionkeep.log
   <machine>/
     claude/
       projects/…                    # mirror of ~/.claude/projects
@@ -261,7 +269,15 @@ archive/
 
 with branches `macbook` and `mini` (or `master` / `mini-master` — the name is the user’s). Histories stay linear and unmerged. Checkout of one branch on a given host is enough; the other machine’s tree is not required at runtime.
 
-`.gitignore` is not written by sessionkeep. The archive is the data; it should contain what was harvested. The *software* repo (this project) gitignores build artifacts, not transcripts — because this project must never contain transcripts.
+`.gitignore` is not written by annals. The archive is the data; it should contain what was harvested — and because lock and log now live in `state_dir`, there is nothing in the worktree to ignore. The *software* repo (this project) gitignores build artifacts, not transcripts — because this project must never contain transcripts.
+
+Operational state sits outside the repo:
+
+```
+$XDG_STATE_HOME/annals/<machine>/   # default ~/.local/state/…
+  annals.lock
+  annals.log
+```
 
 ---
 
@@ -345,7 +361,7 @@ Always go through the backup API so uncheckpointed WAL frames are included. Alwa
 
 The archive is a **private** store of everything the user typed to an agent, including tool output. Typical contents: API keys in shell transcripts, `.env` dumps, customer data, internal URLs. Assuming “it is only my laptop” is how copies leak onto GitHub.
 
-sessionkeep does **not** claim to make a public-safe archive.
+annals does **not** claim to make a public-safe archive.
 
 ### What is scrubbed
 
@@ -369,17 +385,17 @@ Document this in the README. Recommend: private git remote, no public fork of an
 ### What is never copied
 
 - `auth.json` and `*.lock`.
-- GPG passphrases, R2 keys, AWS credentials — those belong to recipes, not to sessionkeep.
+- GPG passphrases, R2 keys, AWS credentials — those belong to recipes, not to annals.
 
 ### Git remote
 
-Default remote is unset. If the user sets a GitHub URL, it is their repository. sessionkeep never creates a GitHub repo, never uses a GitHub App, never phones home.
+Default remote is unset. If the user sets a GitHub URL, it is their repository. annals never creates a GitHub repo, never uses a GitHub App, never phones home.
 
 SSH push disables ControlMaster (see §5). That is reliability, not security.
 
 ### Monthly R2 recipe
 
-`recipes/r2-monthly.sh` encrypts with GPG AES256 **before** upload. Plaintext never leaves the machine that runs the recipe. The passphrase file is `chmod 600`. The recipe is not invoked by `sessionkeep backup`.
+`recipes/r2-monthly.sh` encrypts with GPG AES256 **before** upload. Plaintext never leaves the machine that runs the recipe. The passphrase file is `chmod 600`. The recipe is not invoked by `annals backup`.
 
 ---
 
@@ -417,7 +433,7 @@ Not part of the library. Copied and edited by the user.
 | File | Role |
 |---|---|
 | `recipes/launchd.plist` | macOS, `StartCalendarInterval` 03:00, stdout/err under the archive |
-| `recipes/sessionkeep.service` + `.timer` | systemd user, oneshot, `Nice=15`, idle IO, `OnCalendar=*-*-* 03:00` |
+| `recipes/annals.service` + `.timer` | systemd user, oneshot, `Nice=15`, idle IO, `OnCalendar=*-*-* 03:00` |
 | `recipes/r2-monthly.sh` | monthly tar.gz of a **bare** repo, GPG, S3/R2, keep last `KEEP` (default 3) |
 
 Stagger dual-machine hosts (e.g. 03:00 and 13:00) so they do not push the same remote at once. Independent branches make this a courtesy, not a correctness requirement.
@@ -438,7 +454,7 @@ This script is not imported by the package. 42plugin’s schema is not a public 
 
 ## 15. Observability
 
-- Every harvest line is printed and appended to `archive/sessionkeep.log`.
+- Every harvest line is printed and appended to `archive/annals.log`.
 - Per-adapter counts: `copied`, `skipped`, `errors`.
 - Git: skip / commit sha + file count / push ok or push error.
 - Final `du -sh` of the archive.
@@ -509,8 +525,8 @@ No test may read the developer’s real `~/.claude` or write into `~/claude-back
 ## 20. Rollout
 
 1. This repository, empty of any transcript data.
-2. Operator runs `sessionkeep init` on a machine that already has a hand-rolled harvester, points `archive.path` at a **new** directory, runs `backup` in parallel with the old job for several days, compares file counts.
-3. Switch launchd/cron to `sessionkeep backup`. Keep the old script until two successful scheduled runs.
+2. Operator runs `annals init` on a machine that already has a hand-rolled harvester, points `archive.path` at a **new** directory, runs `backup` in parallel with the old job for several days, compares file counts.
+3. Switch launchd/cron to `annals backup`. Keep the old script until two successful scheduled runs.
 4. Only then point `archive.remote` at the existing VPS bare repo (new branch or same branch after a one-time import — operator’s choice; the tool does not migrate).
 5. Public GitHub (software only) + optional article. Hook is “the CLI deletes your history”, not “backup to R2”.
 
@@ -539,7 +555,7 @@ None that block v1. Deferred, not undecided:
 
 - Codex / Gemini / Cursor adapters: add when someone using those tools runs `scan` and files an issue. Detection paths are already listed.
 - Transcript-body redaction as an opt-in filter.
-- `sessionkeep restore` / export-to-markdown. Out of v1; git itself is the restore tool (`git checkout`, copy files back).
+- `annals restore` / export-to-markdown. Out of v1; git itself is the restore tool (`git checkout`, copy files back).
 - Windows. No current operator.
 
 ---
@@ -553,7 +569,7 @@ These are not required to publish v1.
 | Codex adapter | `~/.codex/sessions` mirror_no_delete, same machine layout | v1 |
 | Gemini adapter | whatever the current on-disk format is; verify before copying a whole `~/.gemini` (oauth files) | v1 |
 | Cursor adapter | `~/.cursor` is mixed IDE state — must exclude credentials explicitly | v1 |
-| `sessionkeep verify` | fsck, sample OpenCode JSON parse, count jsonl vs last run | v1 |
+| `annals verify` | fsck, sample OpenCode JSON parse, count jsonl vs last run | v1 |
 | Opt-in body redaction | reuse `sanitize.VALUE_PATTERNS` on jsonl lines, off by default | v1 |
 | Homebrew / mise packaging | after a tagged release | public remote |
 
