@@ -1,0 +1,41 @@
+[project]
+name = "sessionkeep"
+version = "0.1.0"
+description = "Append-only git archive for coding-agent sessions. Agent CLIs treat chat history as cache; sessionkeep treats it as an archive."
+readme = "README.md"
+license = "MIT"
+authors = [
+    { name = "Zhongwei Li", email = "zhongweili@users.noreply.github.com" }
+]
+requires-python = ">=3.12"
+dependencies = []
+keywords = ["claude-code", "grok", "opencode", "backup", "agent", "sessions"]
+classifiers = [
+    "Environment :: Console",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: System :: Archiving :: Backup",
+]
+
+[project.urls]
+Homepage = "https://github.com/zhongweili/sessionkeep"
+Specification = "https://github.com/zhongweili/sessionkeep/blob/main/SPECIFICATION.md"
+
+[project.scripts]
+sessionkeep = "sessionkeep.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/sessionkeep"]
+
+[dependency-groups]
+dev = ["pytest>=8.0"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

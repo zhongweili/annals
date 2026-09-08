@@ -1,0 +1,10 @@
+[Unit]
+Description=sessionkeep append-only agent session archive
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/sessionkeep backup
+Nice=15
+IOSchedulingClass=idle
+StandardOutput=journal
+StandardError=journal

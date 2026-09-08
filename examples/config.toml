@@ -1,0 +1,36 @@
+# Copy to ~/.config/sessionkeep/config.toml and edit.
+# `sessionkeep init` writes a machine-specific version of this file.
+
+[archive]
+path = "~/sessionkeep-archive"
+# One directory (and usually one git branch) per machine. Do not merge
+# working trees across laptops — session paths are host-specific.
+machine = "mini"
+branch = "mini"
+# Optional. Any git remote works: GitHub private, a VPS bare repo, SourceHut.
+# Leave unset for local-only. Push failure does not fail the backup.
+# remote = "git@github.com:YOU/sessionkeep-archive.git"
+# remote_name = "origin"
+push = true
+
+[git]
+# Only needed if this machine has no global git identity.
+# author_name = "sessionkeep"
+# author_email = "you@example.com"
+pack_window_memory = "64m"
+pack_size_limit = "256m"
+
+[[source]]
+kind = "claude"
+enabled = true
+# root = "~/.claude"
+
+[[source]]
+kind = "grok"
+enabled = true
+# root = "~/.grok"
+
+[[source]]
+kind = "opencode"
+enabled = true
+# root = "~/.local/share/opencode/opencode.db"
