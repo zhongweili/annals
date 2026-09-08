@@ -119,7 +119,11 @@ flowchart LR
   R --> R2
 ```
 
-Daily path: adapters → local git. Remote git is redundancy. R2 is a second copy of the remote’s object store, typically run *on* the machine that already holds the bare repo (a VPS next to R2, not a residential uplink).
+Daily path: adapters → local git. The local repo is the product; it is what defeats source-side deletion, which is the failure users actually hit.
+
+Everything to the right of it is optional and serves a *different* failure. The git remote's primary job is **topology** — letting two machines converge into one repo on separate branches — and it is only incidentally offsite redundancy. Whole-disk loss is better covered by the user's existing system backup (Time Machine, Backblaze, restic, borg), which already sweeps `~` and handles a git repo well: ordinary files, self-verifying, cheaply snapshotted. Annals does not reinvent that layer; it produces something that layer already protects. R2 is a second copy of the *remote's* object store, typically run on the machine that already holds the bare repo (a VPS next to R2, not a residential uplink).
+
+Corollary for docs and defaults: `push` defaults to false, and a single-machine user needs no remote at all.
 
 ### Process
 
