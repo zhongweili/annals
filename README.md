@@ -1,5 +1,10 @@
 # annals
 
+> [!NOTE]
+> **Experimental.** Personal tool; feedback welcome. v0.x means `init` → `scan` → `backup` → `status` works on one machine — not a finished product.
+>
+> [中文说明 → README.zh-CN.md](README.zh-CN.md)
+
 **Agent CLIs treat chat history as cache. Annals treats it as an append-only git archive.**
 
 Claude Code, Grok, and OpenCode will silently drop transcripts. Annals harvests them on a schedule, never deletes what the CLI deleted, and commits the result to a local git repo. Offsite durability is your existing system backup's job; an optional git remote is for spanning multiple machines.
@@ -7,6 +12,15 @@ Claude Code, Grok, and OpenCode will silently drop transcripts. Annals harvests 
 v1 adapters: **Claude Code**, **Grok**, **OpenCode**. Unix only. Python 3.12+, stdlib, no runtime deps.
 
 Full contract: [SPECIFICATION.md](SPECIFICATION.md).
+
+## Known limitations
+
+1. **Adapters** cover Claude Code, Grok, and OpenCode only — no Cursor yet.
+2. **Transcript bodies are not redacted.** Treat the archive as private.
+3. **No search index yet** — git is the source of truth (`git grep` / `git log`).
+4. **Unix only.** Multi-machine setup = separate branches per host; no cross-host resume.
+5. **Prefer install from a clone.** `uv tool install git+https://…` depends on the remote being ready.
+
 
 ## Why not rsync / iCloud / a “session sync” app
 
